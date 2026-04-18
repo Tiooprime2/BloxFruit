@@ -18,6 +18,7 @@ local RAW = "https://raw.githubusercontent.com/Tiooprime2/BloxFruit/main/"
 local FILES = {
     "UI.lua",
     "Escape.lua",
+    "Jump.lua",
 }
 
 -- ════════════════════════════════════════════
