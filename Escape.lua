@@ -67,6 +67,7 @@ local function connectEscape(character)
     local rootPart = character:WaitForChild("HumanoidRootPart")
 
     local conn = humanoid.HealthChanged:Connect(function(hp)
+            UI.updateHealth(hp, humanoid.MaxHealth)
         if not isEnabled then return end
         if isCooling    then return end
         if hp <= 0      then return end
