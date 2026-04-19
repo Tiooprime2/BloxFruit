@@ -310,3 +310,4 @@ function UI.setDisabled()
 end
 
 print("[GNG] UI module ready.")
+return UI
