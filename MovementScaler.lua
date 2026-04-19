@@ -132,14 +132,18 @@ local function registerUI()
     end)
 end
 
-player.CharacterAdded:Connect(function()
-    _lastDash = 0
-    if _enabled then MovementScaler.start() end
+-- // Inisialisasi Lifecycle
+task.spawn(function()
+    player.CharacterAdded:Connect(function()
+        _lastDash = 0
+        if _enabled then MovementScaler.start() end
+    end)
+
+    player.CharacterRemoving:Connect(MovementScaler.stop)
+
+    -- Jalankan fitur & munculkan tombol di UI TiooHub
+    MovementScaler.start()
+    registerUI()
 end)
-
-player.CharacterRemoving:Connect(MovementScaler.stop)
-
-MovementScaler.start()
-registerUI()
 
 return MovementScaler
