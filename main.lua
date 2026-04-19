@@ -19,7 +19,7 @@ local FILES = {
     "UI.lua",
     "Escape.lua",
   --  "Jump.lua",
-    HighGravJump.lua,
+    "HighGravJump.lua",
 }
 
 -- ════════════════════════════════════════════
