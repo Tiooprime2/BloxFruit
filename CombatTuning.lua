@@ -1,7 +1,6 @@
 --[[
     TiooHub — CombatTuning v2 (Auto-Detection + Stacking Multiplier)
     Author : Ridho (Head of Cyber Team)
-    Note   : Loaded via main.lua
 ]]
 
 local Players = game:GetService("Players")
@@ -12,30 +11,23 @@ local player  = Players.LocalPlayer
 local CONFIG = {
     SPEED_MULTIPLIER = 1.05,
     POLL_INTERVAL    = 0.2,
-    BASELINE_CD      = 0.5,   -- fallback jika tidak ada attribute ditemukan
+    BASELINE_CD      = 0.5,
 }
 
--- Priority attribute keys
 local CHAR_KEYS = { "M1_Delay", "AttackSpeed", "M1Cooldown", "AttackCooldown" }
 local TOOL_KEYS = { "Cooldown", "SwingDelay", "M1Cooldown", "AttackDelay"    }
 
 local _conn = nil
 local CombatTuning = {}
 
--- ════════════════════════════════════════════
---  AUTO-DETECT COOLDOWN
--- ════════════════════════════════════════════
 local function detectCooldown(hum, character)
-    -- Priority 1: Character Attribute
     for _, key in ipairs(CHAR_KEYS) do
-        local val = hum:GetAttribute(key)
-            or character:GetAttribute(key)
+        local val = hum:GetAttribute(key) or character:GetAttribute(key)
         if val and type(val) == "number" and val > 0 then
             return val, "CharAttr:" .. key
         end
     end
 
-    -- Priority 2: Tool/Weapon Attribute
     local tool = character:FindFirstChildOfClass("Tool")
     if tool then
         for _, key in ipairs(TOOL_KEYS) do
@@ -45,7 +37,6 @@ local function detectCooldown(hum, character)
             end
         end
 
-        -- Coba dari Handle atau child lain
         for _, child in ipairs(tool:GetChildren()) do
             for _, key in ipairs(TOOL_KEYS) do
                 local val = child:GetAttribute(key)
@@ -56,16 +47,10 @@ local function detectCooldown(hum, character)
         end
     end
 
-    -- Priority 3: Baseline fallback
     return CONFIG.BASELINE_CD, "Baseline"
 end
 
--- ════════════════════════════════════════════
---  WRITE BACK MULTIPLIER (ke semua source yang ditemukan)
--- ════════════════════════════════════════════
 local function writeBack(character, hum, newVal)
-    -- Tulis balik ke semua key yang mungkin ada
-    -- agar sistem game membacanya secara konsisten
     for _, key in ipairs(CHAR_KEYS) do
         if hum:GetAttribute(key) then
             hum:SetAttribute(key, newVal)
@@ -85,21 +70,13 @@ local function writeBack(character, hum, newVal)
     end
 end
 
--- ════════════════════════════════════════════
---  APPLY STACKING MULTIPLIER
--- ════════════════════════════════════════════
 local function applyMultiplier(hum, character)
     local current, source = detectCooldown(hum, character)
     local newCooldown     = current / CONFIG.SPEED_MULTIPLIER
-
     writeBack(character, hum, newCooldown)
-
     return current, newCooldown, source
 end
 
--- ════════════════════════════════════════════
---  POLLING LOOP
--- ════════════════════════════════════════════
 local function startPolling(hum, character)
     if _conn then _conn:Disconnect() end
 
@@ -112,13 +89,13 @@ local function startPolling(hum, character)
         elapsed = 0
 
         if not (hum and hum.Parent) then
-            _conn:Disconnect(); _conn = nil
+            _conn:Disconnect()
+            _conn = nil
             return
         end
 
         local before, after, src = applyMultiplier(hum, character)
 
-        -- Log sekali saja saat pertama kali berhasil detect
         if not logged and src ~= "Baseline" then
             print(string.format(
                 "[TiooHub] CombatTuning — Source: %s | %.4f → %.4f (x%.2f)",
@@ -129,9 +106,6 @@ local function startPolling(hum, character)
     end)
 end
 
--- ════════════════════════════════════════════
---  PUBLIC API
--- ════════════════════════════════════════════
 function CombatTuning.start(character)
     local hum = character:WaitForChild("Humanoid")
     startPolling(hum, character)
@@ -148,9 +122,6 @@ function CombatTuning.setMultiplier(val)
     print(string.format("[TiooHub] Multiplier updated → x%.2f", val))
 end
 
--- ════════════════════════════════════════════
---  AUTO INIT
--- ════════════════════════════════════════════
 player.CharacterAdded:Connect(CombatTuning.start)
 player.CharacterRemoving:Connect(CombatTuning.stop)
 
