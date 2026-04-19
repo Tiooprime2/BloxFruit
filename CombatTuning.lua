@@ -115,11 +115,13 @@ function CombatTuning.setMultiplier(val)
     print(string.format("[TiooHub] Multiplier updated → x%.2f", val))
 end
 
-player.CharacterAdded:Connect(CombatTuning.start)
-player.CharacterRemoving:Connect(CombatTuning.stop)
 
-if player.Character then
-    CombatTuning.start(player.Character)
-end
+-- Inisialisasi dibungkus task.spawn agar tidak macet di loader
+task.spawn(function()
+    player.CharacterAdded:Connect(CombatTuning.start)
+    if player.Character then
+        CombatTuning.start(player.Character)
+    end
+end)
 
 return CombatTuning
