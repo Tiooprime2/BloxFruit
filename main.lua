@@ -21,6 +21,7 @@ local FILES = {
   --  "Jump.lua",
     "HighGravJump.lua",
     "CombatTuning.lua",
+    "MovementScaler.lua",
 }
 
 -- ════════════════════════════════════════════
