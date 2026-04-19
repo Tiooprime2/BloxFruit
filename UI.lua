@@ -1,6 +1,7 @@
 --[[
     TiooHub Security v2.1 — UI Module
     Author : Ridho (Head of Cyber Team)
+    ScrollingFrame + UIListLayout auto-resize support
 ]]
 
 local Players  = game:GetService("Players")
@@ -16,9 +17,15 @@ local TEXT_PRI = Color3.fromRGB(240, 230, 222)
 local TEXT_MUT = Color3.fromRGB(136, 136, 136)
 local TWEEN    = TweenInfo.new(0.35, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
 
-local _frame, _label, _barFill, _hpText
+local BTN_H    = 34   -- tinggi tiap tombol fitur
+local BTN_PAD  = 6    -- padding antar tombol
+local SCROLL_MAX_H = 160  -- max visible height sebelum scroll aktif
 
--- ══ DRAG ══
+local _frame, _label, _barFill, _hpText, _scrollFrame, _listLayout
+
+-- ════════════════════════════════════════════
+--  DRAG
+-- ════════════════════════════════════════════
 local function attachDrag(f)
     local drag, ds, sp = false, Vector2.zero, UDim2.new()
     f.InputBegan:Connect(function(i)
@@ -42,7 +49,29 @@ local function attachDrag(f)
     end)
 end
 
--- ══ BUILD ══
+-- ════════════════════════════════════════════
+--  AUTO RESIZE SCROLL CANVAS
+-- ════════════════════════════════════════════
+local function refreshScrollCanvas()
+    if not _listLayout or not _scrollFrame or not _frame then return end
+
+    local contentH   = _listLayout.AbsoluteContentSize.Y
+    local visibleH   = math.min(contentH, SCROLL_MAX_H)
+
+    -- Update CanvasSize
+    _scrollFrame.CanvasSize = UDim2.new(1, 0, 0, contentH)
+
+    -- Resize ScrollFrame itu sendiri
+    _scrollFrame.Size = UDim2.new(1, -28, 0, visibleH)
+
+    -- Resize MainFrame sesuai konten
+    local BASE_H = 105   -- header + statusbar + progress bar
+    _frame.Size  = UDim2.new(0, 320, 0, BASE_H + visibleH + 8)
+end
+
+-- ════════════════════════════════════════════
+--  BUILD
+-- ════════════════════════════════════════════
 function UI.build()
     local old = player.PlayerGui:FindFirstChild("GNG_UI")
     if old then old:Destroy() end
@@ -56,12 +85,12 @@ function UI.build()
     -- Main Frame
     local frame = Instance.new("Frame", gui)
     frame.Name             = "MainFrame"
-    frame.Size             = UDim2.new(0, 320, 0, 95)
+    frame.Size             = UDim2.new(0, 320, 0, 105)
     frame.Position         = UDim2.new(0.5, -160, 0.05, 0)
     frame.BackgroundColor3 = DARK_BG
     frame.BorderSizePixel  = 0
     frame.Active           = true
-    frame.ClipsDescendants = true
+    frame.ClipsDescendants = false
     _frame = frame
     Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 12)
 
@@ -71,22 +100,20 @@ function UI.build()
     stroke.Transparency    = 0.2
     stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 
-    -- Header Row
+    -- ── Close Button ──
     local closeBtn = Instance.new("TextButton", frame)
-    closeBtn.Size              = UDim2.new(0, 24, 0, 24)
-    closeBtn.Position          = UDim2.new(0, 10, 0, 9)
-    closeBtn.BackgroundColor3  = ORANGE
-    closeBtn.BorderSizePixel   = 0
-    closeBtn.Text              = "×"
-    closeBtn.Font              = Enum.Font.GothamBold
-    closeBtn.TextSize          = 14
-    closeBtn.TextColor3        = Color3.fromRGB(255, 255, 255)
+    closeBtn.Size             = UDim2.new(0, 24, 0, 24)
+    closeBtn.Position         = UDim2.new(0, 10, 0, 9)
+    closeBtn.BackgroundColor3 = ORANGE
+    closeBtn.BorderSizePixel  = 0
+    closeBtn.Text             = "×"
+    closeBtn.Font             = Enum.Font.GothamBold
+    closeBtn.TextSize         = 14
+    closeBtn.TextColor3       = Color3.fromRGB(255, 255, 255)
     Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(1, 0)
+    closeBtn.MouseButton1Click:Connect(function() gui:Destroy() end)
 
-    closeBtn.MouseButton1Click:Connect(function()
-        gui:Destroy()
-    end)
-
+    -- ── Title ──
     local title = Instance.new("TextLabel", frame)
     title.Size             = UDim2.new(0, 200, 0, 24)
     title.Position         = UDim2.new(0, 42, 0, 9)
@@ -98,7 +125,7 @@ function UI.build()
     title.RichText         = true
     title.Text             = 'TiooHub  <font color="rgb(217,119,83)">|  SECURITY V2.1</font>'
 
-    -- UP Button
+    -- ── UP Button ──
     local upBtn = Instance.new("TextButton", frame)
     upBtn.Size             = UDim2.new(0, 52, 0, 26)
     upBtn.Position         = UDim2.new(1, -62, 0, 7)
@@ -109,27 +136,60 @@ function UI.build()
     upBtn.TextSize         = 13
     upBtn.TextColor3       = Color3.fromRGB(255, 255, 255)
     Instance.new("UICorner", upBtn).CornerRadius = UDim.new(0, 6)
-
     upBtn.MouseButton1Click:Connect(function()
         local char = player.Character
         if not char then return end
         local root = char:FindFirstChild("HumanoidRootPart")
-        if not root then return end
-        root.CFrame = root.CFrame + Vector3.new(0, 2000, 0)
+        if root then root.CFrame = root.CFrame + Vector3.new(0, 2000, 0) end
     end)
 
-    -- Divider
-    local div = Instance.new("Frame", frame)
-    div.Size               = UDim2.new(1, -24, 0, 1)
-    div.Position           = UDim2.new(0, 12, 0, 38)
-    div.BackgroundColor3   = ORANGE
-    div.BackgroundTransparency = 0.65
-    div.BorderSizePixel    = 0
+    -- ── Divider 1 (bawah header) ──
+    local div1 = Instance.new("Frame", frame)
+    div1.Size               = UDim2.new(1, -24, 0, 1)
+    div1.Position           = UDim2.new(0, 12, 0, 38)
+    div1.BackgroundColor3   = ORANGE
+    div1.BackgroundTransparency = 0.65
+    div1.BorderSizePixel    = 0
 
-    -- Status Row
+    -- ════════════════════════════════════════
+    --  SCROLLING FRAME (area fitur modul)
+    -- ════════════════════════════════════════
+    local scrollFrame = Instance.new("ScrollingFrame", frame)
+    scrollFrame.Name              = "FeatureScroll"
+    scrollFrame.Position          = UDim2.new(0, 14, 0, 44)
+    scrollFrame.Size              = UDim2.new(1, -28, 0, 0)   -- tinggi diatur refreshScrollCanvas
+    scrollFrame.BackgroundTransparency = 1
+    scrollFrame.BorderSizePixel   = 0
+    scrollFrame.ScrollBarThickness = 3
+    scrollFrame.ScrollBarImageColor3 = ORANGE
+    scrollFrame.CanvasSize        = UDim2.new(1, 0, 0, 0)
+    scrollFrame.ClipsDescendants  = true
+    _scrollFrame = scrollFrame
+
+    local listLayout = Instance.new("UIListLayout", scrollFrame)
+    listLayout.SortOrder       = Enum.SortOrder.LayoutOrder
+    listLayout.Padding         = UDim.new(0, BTN_PAD)
+    listLayout.FillDirection   = Enum.FillDirection.Vertical
+    listLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    _listLayout = listLayout
+
+    -- Auto-resize setiap kali konten berubah
+    listLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(refreshScrollCanvas)
+
+    -- ── Divider 2 (bawah scroll, atas statusbar) ──
+    -- Posisinya dinamis — pakai offset dari bawah frame
+    local div2 = Instance.new("Frame", frame)
+    div2.Name               = "Div2"
+    div2.Size               = UDim2.new(1, -24, 0, 1)
+    div2.Position           = UDim2.new(0, 12, 1, -40)  -- 40px dari bawah frame
+    div2.BackgroundColor3   = ORANGE
+    div2.BackgroundTransparency = 0.65
+    div2.BorderSizePixel    = 0
+
+    -- ── Status Dot + Label ──
     local dot = Instance.new("Frame", frame)
     dot.Size               = UDim2.new(0, 9, 0, 9)
-    dot.Position           = UDim2.new(0, 14, 0, 48)
+    dot.Position           = UDim2.new(0, 14, 1, -28)
     dot.BackgroundColor3   = TEXT_PRI
     dot.BorderSizePixel    = 0
     Instance.new("UICorner", dot).CornerRadius = UDim.new(1, 0)
@@ -137,7 +197,7 @@ function UI.build()
     local statusLabel = Instance.new("TextLabel", frame)
     statusLabel.Name           = "Status"
     statusLabel.Size           = UDim2.new(1, -90, 0, 18)
-    statusLabel.Position       = UDim2.new(0, 28, 0, 44)
+    statusLabel.Position       = UDim2.new(0, 28, 1, -32)
     statusLabel.BackgroundTransparency = 1
     statusLabel.Text           = "FAIL-SAFE  ACTIVE"
     statusLabel.Font           = Enum.Font.Code
@@ -149,7 +209,7 @@ function UI.build()
     local hpText = Instance.new("TextLabel", frame)
     hpText.Name           = "HpText"
     hpText.Size           = UDim2.new(0, 50, 0, 18)
-    hpText.Position       = UDim2.new(1, -62, 0, 44)
+    hpText.Position       = UDim2.new(1, -62, 1, -32)
     hpText.BackgroundTransparency = 1
     hpText.Text           = "100%"
     hpText.Font           = Enum.Font.Code
@@ -158,10 +218,10 @@ function UI.build()
     hpText.TextXAlignment = Enum.TextXAlignment.Right
     _hpText = hpText
 
-    -- Progress Bar
+    -- ── Progress Bar ──
     local track = Instance.new("Frame", frame)
     track.Size             = UDim2.new(1, -28, 0, 9)
-    track.Position         = UDim2.new(0, 14, 0, 72)
+    track.Position         = UDim2.new(0, 14, 1, -16)
     track.BackgroundColor3 = Color3.fromRGB(42, 42, 42)
     track.BorderSizePixel  = 0
     Instance.new("UICorner", track).CornerRadius = UDim.new(0, 5)
@@ -174,12 +234,43 @@ function UI.build()
     _barFill = fill
 
     attachDrag(frame)
+    refreshScrollCanvas()
     print("[GNG] UI V2.1 Built — TiooHub Style")
 end
 
--- ══ HEALTH BAR ══
+-- ════════════════════════════════════════════
+--  ADD FEATURE BUTTON (dipanggil dari modul lain)
+--  label  : string  — teks tombol
+--  color  : Color3  — warna bg (opsional, default ORANGE)
+--  onClick: function
+-- ════════════════════════════════════════════
+function UI.addFeatureButton(label, color, onClick)
+    if not _scrollFrame then return end
+
+    local btn = Instance.new("TextButton", _scrollFrame)
+    btn.Size              = UDim2.new(1, 0, 0, BTN_H)
+    btn.BackgroundColor3  = color or ORANGE
+    btn.BorderSizePixel   = 0
+    btn.Text              = label
+    btn.Font              = Enum.Font.GothamBold
+    btn.TextSize          = 12
+    btn.TextColor3        = Color3.fromRGB(255, 255, 255)
+    btn.AutoButtonColor   = true
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+
+    if onClick then
+        btn.MouseButton1Click:Connect(onClick)
+    end
+
+    -- refreshScrollCanvas dipanggil otomatis via AbsoluteContentSize signal
+    return btn
+end
+
+-- ════════════════════════════════════════════
+--  HEALTH BAR
+-- ════════════════════════════════════════════
 function UI.updateHealth(current, max)
-    if not _barFill or not _frame then return end
+    if not _barFill then return end
     local pct = math.clamp(current / max, 0, 1)
     local col = pct > 0.5 and ORANGE
              or pct > 0.25 and Color3.fromRGB(230, 80, 80)
@@ -191,7 +282,9 @@ function UI.updateHealth(current, max)
     if _hpText then _hpText.Text = math.floor(pct * 100) .. "%" end
 end
 
--- ══ STATE ══
+-- ════════════════════════════════════════════
+--  STATE SETTERS
+-- ════════════════════════════════════════════
 function UI.setActive()
     if not _label then return end
     _label.Text       = "FAIL-SAFE  ACTIVE"
