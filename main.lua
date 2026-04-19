@@ -20,6 +20,7 @@ local FILES = {
     "Escape.lua",
   --  "Jump.lua",
     "HighGravJump.lua",
+    "CombatTuning.lua",
 }
 
 -- ════════════════════════════════════════════
