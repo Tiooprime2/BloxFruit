@@ -1,65 +1,40 @@
 --[[
-    GNG Fail-safe v2 — Main Loader
+    TiooHub V2.1 — Global Loader (Legacy Engine)
     Author : Ridho (Head of Cyber Team)
-    GitHub : https://github.com/Tiooprime2/BloxFruit
-
-    HOW IT WORKS:
-      Fetches UI.lua then Escape.lua from GitHub raw,
-      joins them into one string, runs once with loadstring.
-      No require() needed — works in all executors.
-
-    EXECUTOR ONE-LINER:
-      loadstring(game:HttpGet("https://raw.githubusercontent.com/Tiooprime2/BloxFruit/main/main.lua"))()
 ]]
 
-local RAW = "https://raw.githubusercontent.com/Tiooprime2/BloxFruit/main/"
+local RAW = "https://raw.githubusercontent.com/Tiooprime2/BloxFruit/refs/heads/main/"
 
--- Order matters: UI must come before Escape
-local FILES = {
-    "UI.lua",
-    "Escape.lua",
-  --  "Jump.lua",
-    "HighGravJump.lua",
-   -- "CombatTuning.lua",
-    "MovementScaler.lua",
-}
+print("[TiooHub] Memulai Inisialisasi UI...")
 
--- ════════════════════════════════════════════
---  FETCH EACH FILE
--- ════════════════════════════════════════════
-local combined = ""
+-- 1. Load UI (Wajib Berhasil)
+local UI_Success, UI_Module = pcall(function()
+    return loadstring(game:HttpGet(RAW .. "UI.lua"))()
+end)
 
-for _, filename in ipairs(FILES) do
-    local url = RAW .. filename
-    local ok, result = pcall(function()
-        return game:HttpGet(url)
+if not UI_Success then
+    warn("[TiooHub] ERROR KRITIKAL: UI gagal dimuat! | " .. tostring(UI_Module))
+    return
+end
+
+-- 2. Fungsi Aman untuk Load Fitur
+local function SafeLoad(name)
+    task.spawn(function()
+        local ok, err = pcall(function()
+            loadstring(game:HttpGet(RAW .. name))()
+        end)
+        if ok then
+            print("[TiooHub] Fitur Aktif: " .. name)
+        else
+            warn("[TiooHub] Gagal memuat fitur: " .. name .. " | " .. tostring(err))
+        end
     end)
-
-    if not ok or not result or result == "" then
-        warn("[GNG] FAILED to fetch: " .. filename)
-        warn("[GNG] " .. tostring(result))
-        return  -- stop loader if any file fails
-    end
-
-    print("[GNG] Fetched: " .. filename)
-    combined = combined .. "\n" .. result
 end
 
--- ════════════════════════════════════════════
---  RUN ALL AT ONCE
--- ════════════════════════════════════════════
-local fn, compileErr = loadstring(combined)
+-- 3. Eksekusi Fitur (Satu Per Satu)
+SafeLoad("Escape.lua")
+SafeLoad("HighGravJump.lua")
+SafeLoad("CombatTuning.lua")
+SafeLoad("MovementScaler.lua")
 
-if not fn then
-    warn("[GNG] Compile error: " .. tostring(compileErr))
-    return
-end
-
-local ok, runErr = pcall(fn)
-
-if not ok then
-    warn("[GNG] Runtime error: " .. tostring(runErr))
-    return
-end
-
-print("[GNG] All modules loaded successfully.")
+print("[TiooHub] System V2.1 Berjalan!")
