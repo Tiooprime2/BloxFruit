@@ -36,7 +36,6 @@ local function detectCooldown(hum, character)
                 return val, "ToolAttr:" .. key
             end
         end
-
         for _, child in ipairs(tool:GetChildren()) do
             for _, key in ipairs(TOOL_KEYS) do
                 local val = child:GetAttribute(key)
@@ -52,20 +51,14 @@ end
 
 local function writeBack(character, hum, newVal)
     for _, key in ipairs(CHAR_KEYS) do
-        if hum:GetAttribute(key) then
-            hum:SetAttribute(key, newVal)
-        end
-        if character:GetAttribute(key) then
-            character:SetAttribute(key, newVal)
-        end
+        if hum:GetAttribute(key) then hum:SetAttribute(key, newVal) end
+        if character:GetAttribute(key) then character:SetAttribute(key, newVal) end
     end
 
     local tool = character:FindFirstChildOfClass("Tool")
     if tool then
         for _, key in ipairs(TOOL_KEYS) do
-            if tool:GetAttribute(key) then
-                tool:SetAttribute(key, newVal)
-            end
+            if tool:GetAttribute(key) then tool:SetAttribute(key, newVal) end
         end
     end
 end
